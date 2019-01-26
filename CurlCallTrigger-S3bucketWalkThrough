@@ -1,0 +1,25 @@
+import json
+import urllib.parse
+import boto3
+import re
+from botocore.vendored import requests
+
+print('Loading function')
+def lambda_handler(event, context):
+# exracting info of s3 bucket    
+    s3 = boto3.resource("s3")
+    my_bucket = s3.Bucket('BuckerName')
+# pattern matching for the location
+    patten = 'FolderInsideBucket/.+/subfolder/subfolder/.+(.csv|.zip|.txt)'
+    keys = []
+# loop walk to bucket objectes
+    for file in my_bucket.objects.all():
+        #print ("filepath: "+ file.key)
+        path = file.key
+# condition matching if patten then call api server      
+        if re.search(patten,path):
+            keys.append(path)
+            context.callbackWaitsForEmptyEventLoop = False;
+            #print("path :" +path)
+            r = requests.post("http://webaddress-or-IP/subfile", json={"filePath": path})
+            print('vale: ' + str(r.status_code) + str(r.reason))

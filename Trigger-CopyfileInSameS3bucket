@@ -1,0 +1,51 @@
+# Copy one file to other file in s3 same bucket
+import json
+import urllib.parse
+import boto3
+import os
+import re
+def lambda_handler(event, context):
+    s3 = boto3.resource("s3")
+    my_bucket = s3.Bucket('BucketName')
+    # making key as list
+    keys = []
+    #all_objects = s3.list_objects(Bucket = 'BucketName') 
+    #for obj in bucket.objects.all():
+    for file in my_bucket.objects.all():
+        #print ("filepath: "+ file.key)
+        path = file.key
+        keys.append(path)
+        
+    #print(keys)
+    userDirectories = []
+    for i, element in enumerate(keys):
+        #print(element)
+        if re.match('^FirstFolderInS3Bucket/.[^/]+/$', element):
+            #print('iside if')
+            userDirectories.append(keys[i])
+    users = []
+    for i in userDirectories:
+        sep = i.split('/')
+        users.append(sep[1])
+    
+    for user in users:
+        for file in keys:
+            if re.match('FirstFolderInBucket/'+user+'/subFolder/.+$',file):
+                users.remove(user)
+    
+    for user in users:
+        #print('username :'+user)
+        for file in keys:
+            #print('fileName :'+file)
+            if(re.match('FirstFolderInBucket/'+user+'/subFolder/subFolder/.+$',file)):
+                #print('inside if')
+                srcDir = file
+                fileNameSep = file.split('/')
+                fileName= fileNameSep[len(fileNameSep)-1]
+                destination = 'FirstFolderInBucket/'+user+'/subFolder/'+fileName
+                print('source path :' + srcDir)
+                print('destination path :' + destination)#move file from srcDir to destination
+		#copy file from one bucket to another
+                s3.Object('BucketName',destination).copy_from(CopySource={'Bucket': 'BucketName', 'Key': srcDir})
+		#delete file from the bucket
+                s3.Object('BucketName',srcDir).delete()
