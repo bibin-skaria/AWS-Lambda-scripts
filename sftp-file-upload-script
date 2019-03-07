@@ -1,0 +1,9 @@
+#!/bin/sh
+HOST='www.hostname.com' # ipaddress or hostname
+FILE='/var/www/html/filepath'  # source file in our server
+
+sftp $HOST <<EOF
+cd /sftp-targetted-file/ # In sftp targetted file name
+put $FILE
+bye
+EOF
