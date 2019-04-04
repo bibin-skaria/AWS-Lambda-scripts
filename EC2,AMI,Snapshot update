@@ -1,0 +1,143 @@
+# Automatically update new ami and snapshot of EC2 instance 
+
+import boto3
+import datetime
+import json
+
+def lambda_handler(event, context):
+
+
+  Region = 'us-east-1'
+  
+  ##### Retention in count ######
+  Retention = 1
+  ###############################
+  
+  ec2Client = boto3.client('ec2',region_name=Region)
+  ec2Resource = boto3.resource('ec2',region_name=Region)
+  #print('ec2Client', ec2Client)
+  #print('ec2Resource', ec2Resource)
+  
+  curDate = datetime.datetime.now().strftime("%Y/%m/%d_%H/%M/%S")
+  #curDate = datetime.datetime.now().strftime("%H/%M_%d/%m/%Y")
+  
+  #Filter = [ {'Name':'tag:backup' , 'Values':['yes']} ]
+  
+  imageCounter = {}
+  images = ec2Resource.images.filter(Owners=['self'])
+  #print ('images',images)
+  print ("images object", images.all())
+  for image in images.all():
+   #print('image variable', image.name)
+   #imageInstanceName,imageCreationDate = image.name.split('-')
+   #imageInstanceName = image.name.split('-')
+   #print('imageInstanceName',imageInstanceName)
+        
+   imageCreationDate = image.creation_date
+   imageInstanceName = image.name
+   imageCreationDate = image.creation_date.replace('T','_')
+   imageCreationDate= imageCreationDate.replace(':','/')
+   imageCreationDate= imageCreationDate.replace('-','/').split('.')[0]
+     #imageCreationDate= imageCreationDate.split('.')
+     #imageCreationDate1= imageCreationDate1.split('/')[::-1]
+     #imageCreationTime = imageCreationDate[1].split('.')
+     #print('imageCreationDate', imageCreationTime)
+   print('imageCreationDate', imageCreationDate)
+   print('imageInstanceName',imageInstanceName)
+   if imageInstanceName not in imageCounter:
+    imageCounter[imageInstanceName] = []
+    imageCounter[imageInstanceName].append((imageCreationDate,image.id))
+   else:
+    imageCounter[imageInstanceName].append((imageCreationDate,image.id))
+  json_data = json.dumps(imageCounter)
+  itemcount = json.loads(json_data)
+  #len(z["results"])
+  #print ("imagecounter", itemcount)
+  #print("elements",len(itemcount['AMIEcologise']))
+  
+  #for key in itemcount:
+  #    print ("noOfElements ",len(itemcount[key]))
+  
+  def getImageDate(tup):
+   return datetime.datetime.strptime(tup[0],'%Y/%m/%d_%H/%M/%S')
+   #return datetime.datetime.strptime(tup[0],'%H/%M_%d/%m/%Y')
+  
+  
+  ####### Delete old images if retention meets or exceeded #######
+  
+  def deleteOldImages(instanceName):
+    FetchFromDate = (Retention-1) * -1
+    print("hello")
+    sortedList = sorted(imageCounter[imageInstanceName],key=getImageDate)
+    #for amiDate,amiId in sortedList[:FetchFromDate]:
+    print("hello")
+    for amiDate,amiId in sortedList:
+    #[:FetchFromDate]: >> Commented for Retention only need 1 which this new AMI
+      ec2Client.deregister_image(ImageId=amiId,DryRun=False)
+      print('Deleting Image : {}'.format(amiId))
+    
+    ####### Retention check ###########
+    
+  our_instances = [ "i-07b189e2a0b6e3a45" ]
+    
+  for our_instance in our_instances:
+        for instance in ec2Resource.instances.filter():
+          if instance.id == our_instance:
+            for tag in instance.tags:
+              if tag['Key'] == 'Name':
+                instanceName = tag['Value']
+                print(instanceName)
+                #for key,value in imageCounter:
+                #    print("counter", len(value))
+                #print ("imagecounter", len(itemcount[str(instanceName)]))
+                amiCount = 0
+                for key in itemcount:
+                    amiCount = len(itemcount[key])
+                #amiCount = len(itemcount.get(instanceName,[]))
+                instanceId = instance.id
+                print('amicount ', amiCount)
+                if amiCount >= Retention:
+                  print (instanceName)
+                  deleteOldImages(imageInstanceName)
+                  imageInfo = ec2Client.create_image(InstanceId=instanceId,Name='{}-{}'.format(instanceName,curDate),NoReboot=True,DryRun=False)
+                  print('Creating Image : {}'.format(imageInfo['ImageId']))
+                  
+  ########snapshot deletion####################
+  snapshots = ec2Client.describe_snapshots(MaxResults=1000, OwnerIds=['self'])['Snapshots']
+  #amis = ec2.describe_snapshots(OwnerIds=['self'])# ], MaxResults=90000)
+  #imagelist = []
+  #AMIlist = []
+  #for image in images.all():
+  #    imagelist.append(image.id)
+  
+  for snapshot in snapshots:
+      snapshotlist = snapshot['Description'].split()
+      snapshotlist = snapshotlist[4:-2]
+      snapshotlist = snapshotlist[0]
+      #AMIlist.append(snapshotlist)
+      for image in images.all():
+          #imagelist.append(image.id)
+          #print('image', image.id)
+          #print('snap', snapshotlist)
+          if image.id == snapshotlist:
+              print("live AMI snapshot" + snapshot['SnapshotId'])
+          else:
+              ec2Client.delete_snapshot(SnapshotId=snapshot['SnapshotId'])
+              print("Deleting snapshot " + snapshot['SnapshotId'])
+      
+      
+      #AMIlist.append(snapshotlist)
+      
+      #print("snapshot", snapshot['Description'])
+            #if snapshot['Description'].find(image) > 0:
+            #    snap = ec.delete_snapshot(SnapshotId=snapshot['SnapshotId'])
+            #    print("Deleting snapshot " + snapshot['SnapshotId'])
+            #    print("-------------")
+  #print(AMIlist)
+  #print(imagelist)
+  
+  # TODO implement
+  return {
+  'statusCode': 200,
+  'body': json.dumps('AMI Created Successfully!')
+}
