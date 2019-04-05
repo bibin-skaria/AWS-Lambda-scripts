@@ -1,8 +1,8 @@
-# Automatically update new ami and snapshot of EC2 instance 
-
+# Automatically update new ami and snapshot of EC2 instance
 import boto3
 import datetime
 import json
+import re
 
 def lambda_handler(event, context):
 
@@ -44,6 +44,7 @@ def lambda_handler(event, context):
      #print('imageCreationDate', imageCreationTime)
    print('imageCreationDate', imageCreationDate)
    print('imageInstanceName',imageInstanceName)
+   
    if imageInstanceName not in imageCounter:
     imageCounter[imageInstanceName] = []
     imageCounter[imageInstanceName].append((imageCreationDate,image.id))
@@ -113,17 +114,21 @@ def lambda_handler(event, context):
   for snapshot in snapshots:
       snapshotlist = snapshot['Description'].split()
       snapshotlist = snapshotlist[4:-2]
-      snapshotlist = snapshotlist[0]
-      #AMIlist.append(snapshotlist)
-      for image in images.all():
-          #imagelist.append(image.id)
-          #print('image', image.id)
-          #print('snap', snapshotlist)
-          if image.id == snapshotlist:
-              print("live AMI snapshot" + snapshot['SnapshotId'])
-          else:
-              ec2Client.delete_snapshot(SnapshotId=snapshot['SnapshotId'])
-              print("Deleting snapshot " + snapshot['SnapshotId'])
+      print(snapshotlist)
+      if len(snapshotlist) != 0:
+       print(snapshotlist)
+       if re.search("ami-*", snapshotlist[0]):
+        snapshotlist = snapshotlist[0]
+        #AMIlist.append(snapshotlist)
+        for image in images.all():
+            #imagelist.append(image.id)
+            #print('image', image.id)
+            #print('snap', snapshotlist)
+            if image.id == snapshotlist:
+                print("live AMI snapshot" + snapshot['SnapshotId'])
+            else:
+                ec2Client.delete_snapshot(SnapshotId=snapshot['SnapshotId'])
+                print("Deleting snapshot " + snapshot['SnapshotId'])
       
       
       #AMIlist.append(snapshotlist)
