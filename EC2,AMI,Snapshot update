@@ -233,7 +233,7 @@ def lambda_handler(event, context):
   ###############################
   
   ##### Retention in count ######
-  Retention = 2
+  Retention = 1
   
   ###############################
   
@@ -316,27 +316,28 @@ def lambda_handler(event, context):
      imageCreationDate = image.creation_date
      imageInstanceName = image.name
      dicInstanceName = imageInstanceName.split('_')
-     dicInstanceName = dicInstanceName[0] + "_" + dicInstanceName[1]
-     # Pasrsing date as per our need
-     imageCreationDate = image.creation_date.replace('T','_')
-     imageCreationDate= imageCreationDate.replace(':','/')
-     imageCreationDate= imageCreationDate.replace('-','/').split('.')[0]
-     # printing image id in loop to monitor list of image 
-     print('image-id>>>>>', image.id)
-     # Pasrsing Image Name for further association with instanceID and AMI-ID.
-     imageAssociationID = imageInstanceName.split('_')
-     imageAssociationID = imageAssociationID[1]
-     print("imageAssociationID or instanceID >>>>>", imageAssociationID)
-     # printing image creation date and name, to monitor list of name and dates
-     print('imageCreationDate>>>>>', imageCreationDate)
-     print('imageInstanceName>>>>>',imageInstanceName)
-     # filling imageCounter dictionary for further use in code.
-     if dicInstanceName not in imageCounter:
-      imageCounter[dicInstanceName] = []
-      imageCounter[dicInstanceName].append((imageCreationDate,image.id))
-     else:
-      imageCounter[dicInstanceName].append((imageCreationDate,image.id))
-     print("dicnorty details", imageCounter)
+     if len(dicInstanceName) >= 2 : 
+       dicInstanceName = dicInstanceName[0] + "_" + dicInstanceName[1]
+       # Pasrsing date as per our need
+       imageCreationDate = image.creation_date.replace('T','_')
+       imageCreationDate= imageCreationDate.replace(':','/')
+       imageCreationDate= imageCreationDate.replace('-','/').split('.')[0]
+       # printing image id in loop to monitor list of image 
+       print('image-id>>>>>', image.id)
+       # Pasrsing Image Name for further association with instanceID and AMI-ID.
+       imageAssociationID = imageInstanceName.split('_')
+       imageAssociationID = imageAssociationID[1]
+       print("imageAssociationID or instanceID >>>>>", imageAssociationID)
+       # printing image creation date and name, to monitor list of name and dates
+       print('imageCreationDate>>>>>', imageCreationDate)
+       print('imageInstanceName>>>>>',imageInstanceName)
+       # filling imageCounter dictionary for further use in code.
+       if dicInstanceName not in imageCounter:
+        imageCounter[dicInstanceName] = []
+        imageCounter[dicInstanceName].append((imageCreationDate,image.id))
+       else:
+        imageCounter[dicInstanceName].append((imageCreationDate,image.id))
+       print("dicnorty details", imageCounter)
     ###############################
     # main loop starts here       #
     ###############################
@@ -409,6 +410,7 @@ def lambda_handler(event, context):
                print ("dictionary value", imageCounter)
                flag = flag - 1
                print("flag", flag)
+               break
          
          else:
               flag1 = Retention
