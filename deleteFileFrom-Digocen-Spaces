@@ -1,0 +1,40 @@
+#!/bin/bash
+import subprocess
+cmd = ['s3cmd', 'ls', 's3://bvas-space/Templets/']
+proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+#try:
+#    outs, errs = proc.communicate(timeout=15)
+#except subprocess.TimeoutExpired:
+#    proc.kill()
+## TO STORE OUTPUT
+outs, errs = proc.communicate()
+
+#print ('output:' + outs.decode('ascii'))
+#print ('Error:'+ errs.decode('ascii'))
+#print ('code:'+ str(proc.returncode))
+### To put output in a file and filter our varible from it ##
+with open('./out','w') as dst:
+ dst.write(outs.decode('ascii'))
+### To read output from the file ###
+with open('./out') as src:
+ a= list(src.readlines())
+### To Delete first element from the list because it is the path of the oject and we need path of the file ###
+del a[0]
+#print(a)
+#print(len(a))
+### TO keep last updated 3 files we used below logic ####
+if len(a) > 3:
+ b = len(a) - 3
+ c = 1
+ print("in")
+ for lst in a:
+### To filter only path of the file ####
+  lst1 = lst.split(' ')
+  #print(lst1[-1])
+###  To remove oldest files ####
+  cmd1= ['s3cmd','rm',lst1[-1]]
+  subprocess.Popen(cmd1, stdout=subprocess.PIPE,stderr=subprocess.PIPE)
+  if c == b:
+   break
+  else:
+   c += 1
